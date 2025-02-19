@@ -1,0 +1,32 @@
+# user settings
+.vscode/
+.usersettings/
+
+# build
+build/
+dist/
+
+# environment files
+.env
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.local
+
+# logs files
+*.log
+log/
+logs/
+
+node_modules/
+
+.DS_Store
+*.local
+thumbs.db
+
+.eslintcache
+.browserslistrc
+.electron-vendors.cache.json

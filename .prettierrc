@@ -1,0 +1,11 @@
+{
+  "editorconfig": true,
+  "printWidth": 80,
+  "semi": true,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "arrowParens": "avoid",
+  "proseWrap": "never",
+  "htmlWhitespaceSensitivity": "strict",
+  "singleAttributePerLine": true
+}
