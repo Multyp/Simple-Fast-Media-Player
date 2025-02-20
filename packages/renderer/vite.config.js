@@ -3,6 +3,7 @@
 import { chrome } from "../../.electron-vendors.cache.json";
 import { join } from "path";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 const PACKAGE_ROOT = __dirname;
 
@@ -36,7 +37,7 @@ const config = {
     emptyOutDir: true,
     reportCompressedSize: false,
   },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
 };
 
 export default config;

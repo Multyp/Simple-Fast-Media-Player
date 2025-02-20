@@ -3,6 +3,7 @@
  */
 export const enum ApiKeys {
   IPC = "ipc",
+  MEDIA = "media",
 }
 
 /**
@@ -10,4 +11,7 @@ export const enum ApiKeys {
  */
 export const enum Channels {
   MSG = "msg",
+  SELECT_FOLDER = "folder:select",
+  GET_VIDEOS = "videos:get",
+  STREAM_VIDEO = "video:play",
 }

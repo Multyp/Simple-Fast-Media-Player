@@ -1,8 +1,17 @@
 import type { IpcRendererEvent } from "electron";
 import { contextBridge, ipcRenderer } from "electron";
-import { ApiKeys, type Channels } from "../../main/src/ipc/api";
+import { ApiKeys, Channels } from "../../main/src/ipc/api";
 
-contextBridge.exposeInMainWorld(ApiKeys.IPC, {
+interface MediaAPI {
+  selectFolder: () => Promise<string>;
+  getVideos: (folderPath: string) => Promise<VideoFile[]>;
+}
+
+interface VideoFile {
+  name: string;
+  path: string;
+}
+const ipcAPI = {
   ipcRenderer: {
     sendMessage(channel: Channels, args: unknown[]) {
       ipcRenderer.send(channel, args);
@@ -23,4 +32,12 @@ contextBridge.exposeInMainWorld(ApiKeys.IPC, {
       ipcRenderer.removeAllListeners(channel);
     },
   },
-});
+};
+
+const mediaAPI: MediaAPI = {
+  selectFolder: () => ipcRenderer.invoke(Channels.SELECT_FOLDER),
+  getVideos: (folderPath: string) => ipcRenderer.invoke(Channels.GET_VIDEOS, folderPath),
+};
+
+contextBridge.exposeInMainWorld(ApiKeys.IPC, ipcAPI);
+contextBridge.exposeInMainWorld(ApiKeys.MEDIA, mediaAPI);

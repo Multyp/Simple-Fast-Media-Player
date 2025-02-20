@@ -1,21 +1,111 @@
 /* General imports */
 import { join } from "path";
 import { format } from "url";
-import { BrowserWindow, app, ipcMain } from "electron";
+import {
+  BrowserWindow,
+  ProtocolRequest,
+  ProtocolResponse,
+  app,
+  dialog,
+  ipcMain,
+  protocol,
+} from "electron";
+import * as fs from "fs/promises";
+import { existsSync, statSync, createReadStream } from "fs";
 /* Scoped imports */
 /* Local imports */
 import { Emitter } from "utils/emitter";
 import { Channels } from "ipc/api";
-import { Log } from "../types/logger"
+import { Log } from "../types/logger";
+import * as path from "path";
 
 export class AppManager extends Emitter {
   private main_window: BrowserWindow | undefined;
 
   public constructor() {
     super("APP_MGR");
+    this.setupIpcHandlers();
+  }
 
+  private setupIpcHandlers() {
     ipcMain.on(Channels.MSG, (evt, args) => {
-      Log.info(args)
+      Log.info(args);
+    });
+
+    // Handle folder selection
+    ipcMain.handle(Channels.SELECT_FOLDER, async () => {
+      const result = await dialog.showOpenDialog(this.main_window!, {
+        properties: ["openDirectory"],
+      });
+      return result.filePaths[0];
+    });
+
+    // Handle video listing
+    ipcMain.handle(Channels.GET_VIDEOS, async (_event, folderPath: string) => {
+      try {
+        const files = await fs.readdir(folderPath);
+        Log.info(`Video files found: ${files}`);
+        Log.info(`Filepaths : ${files.map(file => join(folderPath, file))}`);
+        return files
+          .filter(
+            file =>
+              file.toLowerCase().endsWith(".mp4") ||
+              file.toLowerCase().endsWith(".mkv"),
+          )
+          .map(file => ({
+            name: file,
+            path: join(folderPath, file),
+          }));
+      } catch (error) {
+        console.error("Error reading directory:", error);
+        return [];
+      }
+    });
+
+    app.whenReady().then(() => {
+      protocol.handle("media", async (request: Request): Promise<Response> => {
+        let requestedPath = request.url.replace(/^media:\/\//, "");
+        let absolutePath = path.resolve(__dirname, requestedPath);
+
+        let check =
+          existsSync(absolutePath) &&
+          [".mp4", ".mkv", ".avi"].includes(
+            path.extname(absolutePath).toLowerCase(),
+          );
+
+        if (!check) {
+          return new Response("File not found", {
+            status: 404,
+            headers: { "Content-Type": "text/plain" },
+          });
+        }
+
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              const stream = createReadStream(absolutePath);
+              stream.on("data", chunk => controller.enqueue(chunk));
+              stream.on("end", () => controller.close());
+              stream.on("error", err => controller.error(err));
+            },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "video/mp4" },
+          },
+        );
+      });
+    });
+
+    // Add a handler for video streaming
+    ipcMain.handle(Channels.STREAM_VIDEO, async (_event, videoPath: string) => {
+      try {
+        const stats = await fs.stat(videoPath);
+        return { exists: true, size: stats.size };
+      } catch (error) {
+        console.error("Error accessing video file:", error);
+        return { exists: false, size: 0 };
+      }
     });
   }
 
@@ -78,6 +168,7 @@ export class AppManager extends Emitter {
         sandbox: false, // Sandbox disabled because the demo of preload script depend on the Node.js api
         webviewTag: false, // The webview tag is not recommended. Consider alternatives like an iframe or Electron's BrowserView. @see https://www.electronjs.org/docs/latest/api/webview-tag#warning
         preload: join(app.getAppPath(), "packages/preload/dist/index.cjs"),
+        webSecurity: false,
       },
     });
 
